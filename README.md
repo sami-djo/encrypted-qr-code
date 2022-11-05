@@ -1,2 +1,9 @@
 # encrypted-qr-code
-Encypt secret text with passphrase and generate its qr-code and short hash
+Encypt/decrypt secret text with passphrase and generate its qr-code and short hash
+
+Dependencies :
+- qrencode
+- zbar-tools
+- tesseract
+- imagemagick
+- gnupg
