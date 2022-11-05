@@ -39,8 +39,6 @@ convert "qrcode.png" -gravity center -scale 200% -extent 125% -scale 125% -gravi
 sleep 1
 
 rm -rf qrcode.png
-echo $font_size
-echo $text_offset
 echo "QR Code has been generated as $encrypted_secret_short_hash.jpg. Launching with Display."
 
 display $encrypted_secret_short_hash.jpg
