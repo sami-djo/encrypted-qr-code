@@ -1,0 +1,46 @@
+#!/bin/bash
+
+echo Type your secret to generate an encrypted QR code:
+read -rs secret
+
+echo Please retype your secret:
+read -rs secret2
+
+if [[ "$secret" != "$secret2" ]]; then
+    echo Not same secrets !
+    exit 1
+fi
+
+echo Type your passphrase to encrypt the text:
+read -rs passphrase
+
+echo Please retype your passphrase:
+read -rs passphrase2
+
+if [[ "$passphrase" != "$passphrase2" ]]; then
+    echo Not same passphrases !
+    exit 1
+fi
+
+encrypted_secret=$(echo -n "$secret" | gpg --batch --passphrase-fd 3 --s2k-mode 3 --s2k-count 65011712 --s2k-digest-algo sha512 --cipher-algo AES256 --symmetric --armor 3<<<"$passphrase")
+encrypted_secret_hash=$(echo -n "$encrypted_secret" | openssl dgst -sha512 | sed 's/^.* //')
+encrypted_secret_short_hash=$(echo -n "$encrypted_secret_hash" | head -c 8)
+
+
+echo -n "$encrypted_secret" | qrencode -o qrcode.png
+
+sleep 1
+
+font_size=$(echo "$(convert "qrcode.png" -format "%h" info:) / 8" | bc)
+text_offset=$(echo "$font_size * 1.5" | bc)
+
+convert "qrcode.png" -gravity center -scale 200% -extent 125% -scale 125% -gravity south -font /usr/share/fonts/truetype/noto/NotoMono-Regular.ttf -pointsize $font_size -fill black -draw "text 0,$text_offset '$encrypted_secret_short_hash'" "$encrypted_secret_short_hash.jpg"
+
+sleep 1
+
+rm -rf qrcode.png
+echo $font_size
+echo $text_offset
+echo "QR Code has been generated as $encrypted_secret_short_hash.jpg. Launching with Display."
+
+display $encrypted_secret_short_hash.jpg

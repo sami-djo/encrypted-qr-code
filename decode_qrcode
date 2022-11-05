@@ -1,0 +1,45 @@
+#!/bin/bash
+
+if [ -z $1 ]; then
+	echo "Please type image file name as param."
+	exit 1
+fi
+
+if [ ! -f "$1" ]; then
+	echo "Image file \"$1\" does not exist."
+	exit 1
+fi
+
+temp_encrypted_secret=$(zbarimg --nodisplay --quiet --set disable --set qrcode.enable $1)
+
+if [[ $? -ne 0 ]]; then
+	exit 1
+fi
+
+short_hash=$(convert $1 -gravity South -crop 100%x14 tmp.jpg && tesseract tmp.jpg stdout | sed 's/\x0c//')
+
+rm -rf tmp.jpg
+
+encrypted_secret=$(echo -n "$temp_encrypted_secret" | sed 's/QR-Code://')
+encrypted_secret_hash=$(echo -n "$encrypted_secret" | openssl dgst -sha512 | sed 's/^.* //')
+encrypted_secret_short_hash=$(echo -n "$encrypted_secret_hash" | head -c 8)
+# short_hash=$(echo -n "$1" | sed 's/\.[^.]*$//')
+
+if [[ "$short_hash" != "$encrypted_secret_short_hash" ]]; then
+	echo Calculated short hash \""$encrypted_secret_short_hash"\" and provided short hash \""$short_hash"\" dont match !
+	exit 1
+fi
+
+echo Type your passphrase to decrypt the secret:
+read -rs passphrase
+
+secret=$(echo -e "$encrypted_secret" | gpg --quiet --batch --passphrase-fd 3 --decrypt 3<<<"$passphrase")
+
+if [[ $? -ne 0 ]]; then
+	echo Bad passphrase !
+	exit 1
+fi
+
+echo The secret is:
+echo "$secret"
+
